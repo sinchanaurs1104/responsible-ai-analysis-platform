@@ -1,0 +1,36 @@
+# ---- Python / backend ----
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+.venv/
+venv/
+
+# Local SQLite database (generated at runtime, not source)
+backend/*.db
+backend/*.sqlite*
+
+# Trained model artifacts and generated PDF reports (runtime output)
+backend/artifacts/
+
+# Batch experiment outputs
+backend/experiment_log.csv
+backend/experiment_failures.csv
+
+# ---- Node / frontend ----
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# ---- Environment / secrets ----
+.env
+.env.local
+frontend/.env
+backend/.env
+
+# ---- Editor / OS ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

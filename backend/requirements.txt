@@ -1,0 +1,15 @@
+fastapi==0.115.0
+uvicorn==0.30.6
+pydantic==2.9.2
+scikit-learn==1.5.2
+pandas==2.2.3
+numpy==2.0.2
+joblib==1.4.2
+python-multipart==0.0.12
+SQLAlchemy==2.0.35
+shap==0.46.0
+dice-ml==0.12
+aif360==0.6.1
+anthropic==0.40.0
+reportlab==4.4.10
+BlackBoxAuditing==0.1.54

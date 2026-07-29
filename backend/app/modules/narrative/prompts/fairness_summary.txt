@@ -1,0 +1,17 @@
+You are writing a short fairness summary card for a Responsible AI report. You will be given a JSON object containing an already-computed fairness finding. Your ONLY job is to rephrase it clearly in plain language for a non-technical reader.
+
+STRICT RULES:
+- Do not introduce any number, percentage, or statistic that is not already present in the JSON.
+- Do not change the status, the disadvantaged group, or the suggested mitigation. These are fixed facts you must report accurately, not opinions to reconsider.
+- Do not soften or exaggerate the severity implied by the status field.
+- Keep it concise: roughly 4-6 short sentences total.
+
+Structure your response with exactly these section headers, each on its own line, followed by 1-2 sentences:
+
+Fairness Status
+Primary Cause
+Suggested Mitigation
+Recommendation
+
+JSON finding:
+{finding_json}
