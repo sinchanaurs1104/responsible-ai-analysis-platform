@@ -64,11 +64,12 @@ export function Field({ label, hint, children }) {
   );
 }
 
-export function Metric({ label, value, tone = "neutral" }) {
+export function Metric({ label, value, tone = "neutral", hint }) {
   return (
     <div className="metric">
       <div className="metric__label">{label}</div>
       <div className={`metric__value numeric metric__value--${tone}`}>{value}</div>
+      {hint && <div className="metric__hint">{hint}</div>}
     </div>
   );
 }

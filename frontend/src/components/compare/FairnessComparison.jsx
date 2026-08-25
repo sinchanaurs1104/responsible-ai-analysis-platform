@@ -1,4 +1,5 @@
 import ScaleGlyph from "../ScaleGlyph";
+import { FAIRNESS_METRIC_INFO } from "../../api/fairnessMetricInfo";
 
 export default function FairnessComparison({ versions }) {
   return (
@@ -16,17 +17,31 @@ export default function FairnessComparison({ versions }) {
         );
       })}
       <p className="analysis-section__meta">
-        Statistical parity difference -- 0 is perfect parity; further from 0 (either direction) means more disparity.
+        Statistical parity difference -- range {FAIRNESS_METRIC_INFO.statistical_parity_difference.range}, ideal{" "}
+        {FAIRNESS_METRIC_INFO.statistical_parity_difference.ideal}. 0 is perfect parity; further from 0 (either
+        direction) means more disparity.
       </p>
 
       <table className="data-table">
         <thead>
           <tr>
             <th>Version</th>
-            <th>Disparate impact ratio</th>
-            <th>Equal opportunity diff.</th>
-            <th>Average odds diff.</th>
-            <th>Theil index</th>
+            <th>
+              Disparate impact ratio
+              <span className="th-range">{FAIRNESS_METRIC_INFO.disparate_impact_ratio.range}, ideal {FAIRNESS_METRIC_INFO.disparate_impact_ratio.ideal}</span>
+            </th>
+            <th>
+              Equal opportunity diff.
+              <span className="th-range">{FAIRNESS_METRIC_INFO.equal_opportunity_difference.range}, ideal {FAIRNESS_METRIC_INFO.equal_opportunity_difference.ideal}</span>
+            </th>
+            <th>
+              Average odds diff.
+              <span className="th-range">{FAIRNESS_METRIC_INFO.average_odds_difference.range}, ideal {FAIRNESS_METRIC_INFO.average_odds_difference.ideal}</span>
+            </th>
+            <th>
+              Theil index
+              <span className="th-range">{FAIRNESS_METRIC_INFO.theil_index.range}, ideal {FAIRNESS_METRIC_INFO.theil_index.ideal}</span>
+            </th>
           </tr>
         </thead>
         <tbody>

@@ -40,6 +40,8 @@ def create_version(
     mitigation_category: str | None = None,
     mitigation_hyperparameters: dict | None = None,
     runtime_seconds: float | None = None,
+    mitigation_seconds: float | None = None,
+    analysis_seconds: float | None = None,
     random_seed: int | None = None,
     parent_version_id: str | None = None,
 ) -> ModelVersion:
@@ -59,6 +61,8 @@ def create_version(
         mitigation_category=mitigation_category,
         mitigation_hyperparameters=mitigation_hyperparameters or {},
         runtime_seconds=runtime_seconds,
+        mitigation_seconds=mitigation_seconds,
+        analysis_seconds=analysis_seconds,
         random_seed=random_seed,
         algorithm_name=context.algorithm_name,
         preprocessing_status=context.preprocessing_status,

@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import Papa from "papaparse";
 import { buildRun, ApiError } from "../api/client";
 import { ALGORITHMS } from "../api/constants";
@@ -8,7 +8,16 @@ import { Card, PageHeader, Button, Field, WarningBanner, ErrorBanner } from "../
 
 export default function UploadPage() {
   const navigate = useNavigate();
-  const { patch, markStageReached } = useRun();
+  const {
+    runId,
+    datasetName,
+    algorithmName: savedAlgorithmName,
+    targetColumn: savedTargetColumn,
+    validationWarnings,
+    patch,
+    markStageReached,
+    reset,
+  } = useRun();
 
   const [file, setFile] = useState(null);
   const [columns, setColumns] = useState([]);
@@ -74,6 +83,53 @@ export default function UploadPage() {
       setSubmitting(false);
     }
   };
+
+  const handleStartNew = () => {
+    reset();
+    setFile(null);
+    setColumns([]);
+    setTargetColumn("");
+    setAlgorithmName(ALGORITHMS[0].name);
+    setError(null);
+    setWarnings([]);
+  };
+
+  // A run already exists for this session -- show what was submitted
+  // instead of a blank form. Re-uploading a different file wouldn't map
+  // to any real backend operation on this run_id, so the only way to
+  // change the dataset/algorithm is to explicitly start a new run.
+  if (runId) {
+    return (
+      <div>
+        <PageHeader eyebrow="Step 1" title="Upload a dataset & train the original model" />
+        <WarningBanner warnings={validationWarnings} />
+        <Card>
+          <div className="run-summary">
+            <div className="run-summary__row">
+              <span className="run-summary__label">Dataset</span>
+              <span className="run-summary__value">{datasetName || "—"}</span>
+            </div>
+            <div className="run-summary__row">
+              <span className="run-summary__label">Target column</span>
+              <span className="run-summary__value">{savedTargetColumn || "—"}</span>
+            </div>
+            <div className="run-summary__row">
+              <span className="run-summary__label">Classifier</span>
+              <span className="run-summary__value">{savedAlgorithmName || "—"}</span>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: "12px", marginTop: "24px" }}>
+            <Link to="/configure">
+              <Button>Continue to Configure</Button>
+            </Link>
+            <Button variant="secondary" onClick={handleStartNew}>
+              Start a new run
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div>

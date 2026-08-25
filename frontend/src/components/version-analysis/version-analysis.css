@@ -87,13 +87,6 @@
   font-size: var(--fs-small);
   color: var(--color-ink-soft);
 }
-.fairness-finding__suggestion {
-  font-weight: 500;
-}
-.fairness-finding__experimental {
-  color: var(--color-ink-faint);
-  font-weight: 400;
-}
 .fairness-finding__warning {
   color: var(--color-negative);
   font-size: var(--fs-small);
@@ -108,6 +101,10 @@
 .fairness-scale__caption {
   font-size: var(--fs-small);
   color: var(--color-ink-soft);
+}
+.fairness-scale__range {
+  font-size: var(--fs-micro);
+  color: var(--color-ink-faint);
 }
 
 .shap-bars {

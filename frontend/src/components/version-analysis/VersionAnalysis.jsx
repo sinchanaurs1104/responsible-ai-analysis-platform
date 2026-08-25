@@ -23,6 +23,8 @@ export default function VersionAnalysis({ version }) {
     mitigation_category,
     algorithm_name,
     runtime_seconds,
+    mitigation_seconds,
+    analysis_seconds,
     performance_metrics,
     fairness_metrics,
     fairness_finding,
@@ -35,7 +37,6 @@ export default function VersionAnalysis({ version }) {
   } = version;
 
   const title = mitigation_method || "Original model";
-  const isMitigated = Boolean(mitigation_method);
   // Post-processing methods (Calibrated Equalized Odds, Reject Option
   // Classification) don't train a new model -- they wrap the original
   // estimator with a runtime threshold correction. An artifact technically
@@ -59,8 +60,11 @@ export default function VersionAnalysis({ version }) {
               </>
             )}
             {source === "uploaded" && <Badge tone="neutral">uploaded model</Badge>}
-            {runtime_seconds != null && (
-              <span className="numeric">{runtime_seconds.toFixed(2)}s runtime</span>
+            {mitigation_method && mitigation_seconds != null && (
+              <span className="numeric">{mitigation_seconds.toFixed(2)}s mitigation runtime</span>
+            )}
+            {mitigation_method && mitigation_seconds == null && runtime_seconds != null && (
+              <span className="numeric">~{runtime_seconds.toFixed(2)}s mitigation+analysis runtime*</span>
             )}
           </div>
         </div>
@@ -74,7 +78,7 @@ export default function VersionAnalysis({ version }) {
       {narrative_summary && <p className="version-analysis__summary">{narrative_summary}</p>}
 
       <PerformanceSection performance={performance_metrics} />
-      <FairnessSection fairness={fairness_metrics} finding={fairness_finding} isMitigated={isMitigated} />
+      <FairnessSection fairness={fairness_metrics} finding={fairness_finding} />
       <ExplainabilitySection explainability={explainability_results} />
       <ErrorAnalysisSection errorAnalysis={error_analysis_results} />
       <CounterfactualSection counterfactual={counterfactual_results} />

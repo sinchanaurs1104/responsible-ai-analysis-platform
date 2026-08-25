@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import Papa from "papaparse";
 import { configureRun, evaluateOriginal, getRunStatus, ApiError } from "../api/client";
 import { useRun } from "../api/RunContext";
@@ -9,7 +9,21 @@ const POLL_INTERVAL_MS = 2000;
 
 export default function ConfigurePage() {
   const navigate = useNavigate();
-  const { runId, targetColumn, _csvColumns, _csvFile, patch, markStageReached } = useRun();
+  const {
+    runId,
+    targetColumn,
+    _csvColumns,
+    _csvFile,
+    protectedAttribute: savedProtectedAttribute,
+    privilegedValue: savedPrivilegedValue,
+    unprivilegedValue: savedUnprivilegedValue,
+    validationWarnings,
+    status,
+    errorMessage,
+    patch,
+    markStageReached,
+    reset,
+  } = useRun();
 
   const attributeOptions = useMemo(
     () => (_csvColumns || []).filter((c) => c !== targetColumn),
@@ -30,6 +44,13 @@ export default function ConfigurePage() {
 
   useEffect(() => () => {
     if (pollTimer.current) clearInterval(pollTimer.current);
+  }, []);
+
+  useEffect(() => {
+    if (status === "failed" && errorMessage && !error) {
+      setError(errorMessage);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAttributeChange = useCallback(
@@ -121,11 +142,54 @@ export default function ConfigurePage() {
     }
   };
 
+  const handleStartNew = () => {
+    reset();
+    navigate("/upload");
+  };
+
   if (!runId) {
     return (
       <div>
         <PageHeader eyebrow="Step 2" title="Configure the protected attribute" />
         <Card>Start by uploading a dataset first.</Card>
+      </div>
+    );
+  }
+
+  // Already configured & evaluated for this run -- show what was chosen
+  // instead of blank dropdowns. Resubmitting here would re-run /evaluate
+  // and create a duplicate "original model" version server-side, so
+  // changing this decision requires starting a new run rather than
+  // editing in place.
+  if (savedProtectedAttribute && status !== "failed" && !submitting && !evaluating) {
+    return (
+      <div>
+        <PageHeader eyebrow="Step 2" title="Configure the protected attribute" />
+        <WarningBanner warnings={validationWarnings} />
+        <Card>
+          <div className="run-summary">
+            <div className="run-summary__row">
+              <span className="run-summary__label">Protected attribute</span>
+              <span className="run-summary__value">{savedProtectedAttribute}</span>
+            </div>
+            <div className="run-summary__row">
+              <span className="run-summary__label">Privileged group</span>
+              <span className="run-summary__value">{savedPrivilegedValue}</span>
+            </div>
+            <div className="run-summary__row">
+              <span className="run-summary__label">Unprivileged group</span>
+              <span className="run-summary__value">{savedUnprivilegedValue}</span>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: "12px", marginTop: "24px" }}>
+            <Link to="/mitigate">
+              <Button>Continue to Mitigate</Button>
+            </Link>
+            <Button variant="secondary" onClick={handleStartNew}>
+              Start a new run
+            </Button>
+          </div>
+        </Card>
       </div>
     );
   }

@@ -89,6 +89,20 @@ class ModelVersion(Base):
     mitigation_hyperparameters: Mapped[dict] = mapped_column(JSON, default=dict)
     library_versions: Mapped[dict] = mapped_column(JSON, default=dict)
     runtime_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
+    """Deprecated: kept for backward compatibility with rows created
+    before this split. New rows populate mitigation_seconds +
+    analysis_seconds instead, since this combined figure conflates the
+    mitigation-specific cost with the constant SHAP/DiCE analysis cost,
+    making cross-method runtime comparisons misleading."""
+    mitigation_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
+    """Time for the mitigation-specific step only (transform+retrain
+    for pre-processing, wrap for post-processing). None for V1 (no
+    mitigation applied)."""
+    analysis_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
+    """Time for the shared analysis pass (SHAP + error analysis +
+    counterfactuals + fairness metrics) -- roughly constant regardless
+    of mitigation method, so kept separate from mitigation_seconds for
+    fair method-to-method runtime comparisons."""
 
     performance_metrics: Mapped[dict] = mapped_column(JSON, default=dict)
     fairness_metrics: Mapped[dict] = mapped_column(JSON, default=dict)

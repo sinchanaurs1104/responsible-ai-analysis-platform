@@ -21,7 +21,7 @@ const initialState = {
   furthestStage: "upload",
 };
 
-const STAGE_ORDER = ["upload", "configure", "train", "mitigate", "versions", "compare"];
+const STAGE_ORDER = ["upload", "configure", "mitigate", "versions", "compare"];
 
 export function RunProvider({ children }) {
   const [state, setState] = useState(initialState);

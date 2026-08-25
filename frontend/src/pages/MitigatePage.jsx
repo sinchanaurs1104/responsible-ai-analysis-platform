@@ -5,17 +5,32 @@ import { MITIGATION_METHODS } from "../api/constants";
 import { useRun } from "../api/RunContext";
 import { Card, PageHeader, Button, ErrorBanner, Badge } from "../components/ui";
 import VersionAnalysis from "../components/version-analysis/VersionAnalysis";
+import FairnessMetricsInfoBox from "../components/mitigate/FairnessMetricsInfoBox";
 
 const POLL_INTERVAL_MS = 2000;
 
 export default function MitigatePage() {
   const navigate = useNavigate();
-  const { runId, protectedAttribute, privilegedValue, unprivilegedValue, status, currentStage, patch, markStageReached } =
+  const {
+    runId,
+    protectedAttribute,
+    privilegedValue,
+    unprivilegedValue,
+    status,
+    currentStage,
+    mitigationMethods,
+    patch,
+    markStageReached,
+  } =
     useRun();
 
   const [original, setOriginal] = useState(null);
   const [loadingOriginal, setLoadingOriginal] = useState(true);
-  const [selected, setSelected] = useState(MITIGATION_METHODS.map((m) => m.name));
+  const [selected, setSelected] = useState(
+    mitigationMethods && mitigationMethods.length > 0
+      ? mitigationMethods
+      : MITIGATION_METHODS.map((m) => m.name)
+  );
   const [submitting, setSubmitting] = useState(false);
   const [polling, setPolling] = useState(false);
   const [error, setError] = useState(null);
@@ -163,45 +178,53 @@ export default function MitigatePage() {
 
       <ErrorBanner message={error} />
 
-      {loadingOriginal && <Card style={{ marginBottom: "24px" }}>Loading original model…</Card>}
-      {original && (
-        <div style={{ marginBottom: "24px" }}>
-          <VersionAnalysis version={original} />
-        </div>
-      )}
-
-      <Card>
-        <h2 style={{ marginBottom: "16px" }}>Select mitigation methods</h2>
-        <div className="mitigate-grid">
-          {MITIGATION_METHODS.map((m) => (
-            <label key={m.name} className="mitigate-option">
-              <input
-                type="checkbox"
-                checked={selected.includes(m.name)}
-                onChange={() => toggle(m.name)}
-                disabled={running}
-              />
-              <div>
-                <div className="mitigate-option__label">{m.label}</div>
-                <Badge tone={m.category === "pre" ? "accent" : "neutral"}>
-                  {m.category === "pre" ? "pre-processing · new model" : "post-processing · no new model"}
-                </Badge>
-              </div>
-            </label>
-          ))}
-        </div>
-
-        <div style={{ marginTop: "24px", display: "flex", gap: "12px", alignItems: "center" }}>
-          <Button onClick={handleRun} disabled={selected.length === 0 || submitting || running}>
-            {running ? `Running${currentStage ? ` -- ${currentStage}` : ""}…` : submitting ? "Starting…" : "Run pipeline"}
-          </Button>
-          {running && (
-            <Link to="/versions">
-              <Button variant="ghost">View versions completed so far</Button>
-            </Link>
+      <div className="mitigate-layout">
+        <div className="mitigate-layout__main">
+          {loadingOriginal && <Card style={{ marginBottom: "24px" }}>Loading original model…</Card>}
+          {original && (
+            <div style={{ marginBottom: "24px" }}>
+              <VersionAnalysis version={original} />
+            </div>
           )}
+
+          <Card>
+            <h2 style={{ marginBottom: "16px" }}>Select mitigation methods</h2>
+            <div className="mitigate-grid">
+              {MITIGATION_METHODS.map((m) => (
+                <label key={m.name} className="mitigate-option">
+                  <input
+                    type="checkbox"
+                    checked={selected.includes(m.name)}
+                    onChange={() => toggle(m.name)}
+                    disabled={running}
+                  />
+                  <div>
+                    <div className="mitigate-option__label">{m.label}</div>
+                    <Badge tone={m.category === "pre" ? "accent" : "neutral"}>
+                      {m.category === "pre" ? "pre-processing · new model" : "post-processing · no new model"}
+                    </Badge>
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            <div style={{ marginTop: "24px", display: "flex", gap: "12px", alignItems: "center" }}>
+              <Button onClick={handleRun} disabled={selected.length === 0 || submitting || running}>
+                {running ? `Running${currentStage ? ` -- ${currentStage}` : ""}…` : submitting ? "Starting…" : "Run pipeline"}
+              </Button>
+              {running && (
+                <Link to="/versions">
+                  <Button variant="ghost">View versions completed so far</Button>
+                </Link>
+              )}
+            </div>
+          </Card>
         </div>
-      </Card>
+
+        <div className="mitigate-layout__aside">
+          <FairnessMetricsInfoBox />
+        </div>
+      </div>
     </div>
   );
 }

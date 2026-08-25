@@ -51,7 +51,16 @@ from app.modules.versioning.version_manager import create_version
 
 def _analyze_version(context: TrainedModelContext, protected_attribute, privileged_value, unprivileged_value):
     """Runs evaluation + explainability + fairness for one version. Shared
-    by both the V1 and V2 passes so the two stay identical by construction."""
+    by both the V1 and V2 passes so the two stay identical by construction.
+
+    Also times itself: SHAP + DiCE counterfactual generation are typically
+    the slowest parts of this function and that cost is constant -- every
+    mitigation method pays it regardless of what the mitigation itself
+    does. Returning analysis_seconds lets callers report mitigation-only
+    runtime separately from this constant analysis overhead, instead of
+    a combined figure that understates the true gap between methods.
+    """
+    start_time = time.perf_counter()
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         performance = evaluate_model(context)
@@ -62,14 +71,24 @@ def _analyze_version(context: TrainedModelContext, protected_attribute, privileg
             context, protected_attribute, privileged_value, unprivileged_value
         )
         finding = derive_fairness_finding(fairness_metrics)
-    return performance, shap_result, error_analysis, counterfactuals, fairness_metrics, finding
+    analysis_seconds = round(time.perf_counter() - start_time, 4)
+    return performance, shap_result, error_analysis, counterfactuals, fairness_metrics, finding, analysis_seconds
 
 
 def _run_one_mitigation(session, run_id, context, v1_row, method_name, protected_attribute,
                          privileged_value, unprivileged_value, positive_class, random_seed):
     """Runs one mitigation method end-to-end, producing one child version
-    of v1_row. Raises on failure -- caller decides whether to skip or abort."""
-    start_time = time.perf_counter()
+    of v1_row. Raises on failure -- caller decides whether to skip or abort.
+
+    Times the mitigation-specific step (transform+retrain, or wrap)
+    separately from the analysis step (_analyze_version), since the
+    latter is a roughly-constant cost every method pays regardless of
+    what the mitigation itself does. A single combined runtime figure
+    would understate the true gap between e.g. a pre-processing method's
+    transform+retrain cost and a post-processing method's near-instant
+    wrap cost.
+    """
+    mitigation_start = time.perf_counter()
     registration = get_registration(method_name)
 
     if registration.category == CATEGORY_PREPROCESSING:
@@ -97,11 +116,11 @@ def _run_one_mitigation(session, run_id, context, v1_row, method_name, protected
             f"Mitigation category '{registration.category}' is not yet "
             f"executable by this platform (method: '{method_name}')."
         )
+    mitigation_seconds = round(time.perf_counter() - mitigation_start, 4)
 
-    perf2, shap2, err2, cf2, fair2, finding2 = _analyze_version(
+    perf2, shap2, err2, cf2, fair2, finding2, analysis_seconds = _analyze_version(
         context_v2, protected_attribute, privileged_value, unprivileged_value
     )
-    runtime_seconds = round(time.perf_counter() - start_time, 4)
     return create_version(
         session, run_id, context_v2, perf2, version_number=2,
         fairness_metrics=fair2, fairness_finding=finding2,
@@ -109,7 +128,8 @@ def _run_one_mitigation(session, run_id, context, v1_row, method_name, protected
         mitigation_method=registration.strategy.name,
         mitigation_category=registration.category,
         mitigation_hyperparameters=registration.strategy.get_hyperparameters(),
-        runtime_seconds=runtime_seconds,
+        mitigation_seconds=mitigation_seconds,
+        analysis_seconds=analysis_seconds,
         random_seed=random_seed,
         parent_version_id=v1_row.version_id,
     )
@@ -149,7 +169,7 @@ def evaluate_original_model(
             test_unprivileged_count=unprivileged_count,
         )
 
-        perf1, shap1, err1, cf1, fair1, finding1 = _analyze_version(
+        perf1, shap1, err1, cf1, fair1, finding1, analysis_seconds1 = _analyze_version(
             context, protected_attribute, privileged_value, unprivileged_value
         )
 
@@ -158,6 +178,7 @@ def evaluate_original_model(
             session, run_id, context, perf1, version_number=1,
             fairness_metrics=fair1, fairness_finding=finding1,
             shap_result=shap1, error_analysis_result=err1, counterfactual_result=cf1,
+            analysis_seconds=analysis_seconds1,
             random_seed=effective_seed if context.source == "internally_trained" else None,
         )
 

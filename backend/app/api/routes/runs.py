@@ -412,6 +412,8 @@ def _serialize_version(v) -> dict:
         "algorithm_name": v.algorithm_name,
         "preprocessing_status": v.preprocessing_status,
         "runtime_seconds": v.runtime_seconds,
+        "mitigation_seconds": v.mitigation_seconds,
+        "analysis_seconds": v.analysis_seconds,
         "performance_metrics": v.performance_metrics,
         "fairness_metrics": v.fairness_metrics,
         "fairness_finding": v.fairness_finding,
