@@ -31,7 +31,7 @@ The platform lets you:
 5. Review every version's full analysis individually, then compare all versions together in a single dashboard.
 6. Download trained model artifacts (where a genuinely new model exists), a generated PDF Responsible AI Report, and a combined experiment-log CSV export.
 
-The backend is the source of truth for all computation — evaluation, fairness metrics, explainability, and mitigation all run there via [AIF360](https://github.com/Trusted-AI/AIF360), [SHAP](https://github.com/shap/shap), and [DiCE](https://github.com/interpretml/DiCE). The frontend is a thin, stage-based UI over that API and performs no bias computation of its own.
+The backend is the source of truth for all computation — evaluation, fairness metrics, explainability, and mitigation all run there via [AIF360](https://github.com/Trusted-AI/AIF360), [SHAP](https://github.com/shap/shap), and [DiCE](https://github.com/interpretml/DiCE). The frontend is a thin, stage-based UI over that API and performs no bias computation of its own. The one optional exception is plain-language fairness narration, which can call the Anthropic API (see [Features](#features) and [Installation](#installation)) but always falls back to a deterministic template if unavailable.
 
 ---
 
@@ -87,6 +87,7 @@ A shared `RunContext` (React context) carries run state across stages, and a sin
   | Reject Option Classification | post-processing (no new model — wraps the original) |
 - **Multi-method runs**: select any subset of the four methods; each produces its own version in the same run.
 - **Full per-version analysis**: accuracy/precision/recall/F1 + confusion matrix, AIF360 fairness metrics (statistical parity difference, disparate impact ratio, equal opportunity difference, average odds difference, Theil index), a rule-based fairness verdict with a suggested mitigation (labeled `standard` or `experimental` confidence depending on how directly the literature supports that pairing), SHAP top-feature importances, worst-performing error-analysis subgroups, and DiCE counterfactual examples.
+- **Optional LLM-narrated fairness summaries**: the deterministic rule engine always decides the fairness verdict; if `ANTHROPIC_API_KEY` is set, that verdict is additionally rephrased into a plain-language summary via the Anthropic API (Claude Haiku by default), with the LLM's output validated against the source numbers before being trusted. Without a key, or if the call fails, the summary falls back to a deterministic template — this integration is additive polish, never a hard dependency.
 - **Comparison dashboard**: summary table, performance chart, fairness comparison (including a custom visual "scale" indicator), SHAP feature comparison across versions, and a counterfactual-generation coverage/sparsity summary — not a misleading "flip rate" metric, since every stored counterfactual example is by definition a successful flip.
 - **Partial-failure visibility**: if one mitigation method fails (e.g. a missing optional dependency) while others succeed, the run still completes and the failure is surfaced in the UI rather than silently vanishing.
 - **Downloadable outputs**: trained model artifacts (gated to genuinely new models — hidden for post-processing methods, which only wrap the original estimator), a generated PDF Responsible AI Report covering every version in the run, and a combined experiment-log CSV export.
@@ -120,7 +121,9 @@ uvicorn main:app --reload
 
 The API is now available at `http://127.0.0.1:8000`, with interactive docs at `http://127.0.0.1:8000/docs`. A SQLite database file and an `artifacts/` folder are created automatically on first run.
 
-> **Note:** Disparate Impact Remover depends on AIF360's optional `BlackBoxAuditing` package, which is not part of `requirements.txt` above and can be finicky to install on some platforms. Without it, Disparate Impact Remover will fail at runtime for a given run while every other method still completes normally (see [Known Limitations](#known-limitations)).
+> **Note:** `requirements.txt` includes AIF360's `BlackBoxAuditing` dependency (needed for Disparate Impact Remover), but it can still be finicky to build on some platforms. If its install fails or it can't be imported at runtime, Disparate Impact Remover will fail for a given run while every other method still completes normally (see [Known Limitations](#known-limitations)).
+
+> **Optional:** to enable LLM-narrated fairness summaries, set `ANTHROPIC_API_KEY` in the backend environment before starting the server. Optionally set `NARRATIVE_MODEL` to override the default model. Neither variable is required — the platform works fully without them, using the deterministic fallback template instead.
 
 ### Frontend
 
@@ -165,11 +168,11 @@ responsible_ai/
 │   │   │   ├── evaluation/            # performance metrics
 │   │   │   ├── fairness/              # AIF360 metrics, thresholds, insight engine, dataset_utils
 │   │   │   ├── explainability/        # SHAP, error analysis, DiCE counterfactuals
-│   │   │   ├── mitigation/            # preprocessing/ + postprocessing/ strategies + registry
+│   │   │   ├── mitigation/            # preprocessing/ + postprocessing/ + inprocessing/ (stub) strategies + registry
 │   │   │   ├── retraining/            # retrain-with-preprocessing-result
 │   │   │   ├── versioning/            # version_manager, model_card
 │   │   │   ├── reporting/             # PDF report_builder
-│   │   │   ├── narrative/             # narrative_generator (+ LLM/fallback template)
+│   │   │   ├── narrative/             # narrative_generator, llm_client (Anthropic API, optional) + fallback_template
 │   │   │   ├── storage/               # model_storage, report_storage
 │   │   │   └── experiments/           # experiment_log CSV export
 │   │   └── schemas/                    # Pydantic schemas (context, metrics, fairness)
@@ -183,6 +186,7 @@ responsible_ai/
     │   │   │                           # ErrorAnalysis/Counterfactual sub-sections
     │   │   ├── compare/                # SummaryTable, Performance/Fairness/Shap/Counterfactual
     │   │   │                           # comparison components
+    │   │   ├── mitigate/               # FairnessMetricsInfoBox
     │   │   ├── Sidebar.jsx, AppShell.jsx, ScaleGlyph.jsx, ui.jsx
     │   ├── pages/                      # UploadPage, ConfigurePage, MitigatePage, VersionsPage,
     │   │                               # ComparePage
@@ -203,6 +207,7 @@ responsible_ai/
 - [DiCE](https://github.com/interpretml/DiCE) — counterfactual explanations
 - [ReportLab](https://www.reportlab.com/) — PDF report generation
 - [Pydantic](https://docs.pydantic.dev/) — schema validation
+- [Anthropic API](https://docs.anthropic.com/) — optional plain-language fairness narration (Claude Haiku by default), with deterministic-template fallback when no API key is set
 
 **Frontend**
 - [React](https://react.dev/) + [Vite](https://vitejs.dev/)
@@ -214,11 +219,12 @@ responsible_ai/
 
 ## Known Limitations
 
-- **Disparate Impact Remover** depends on AIF360's optional `BlackBoxAuditing` dependency, which is not always straightforward to install. If unavailable, this one method fails per run while the rest complete normally, and the failure is surfaced in the UI (`failed_methods` on run status).
+- **Disparate Impact Remover** depends on AIF360's `BlackBoxAuditing` dependency (included in `requirements.txt`), which is not always straightforward to build on some platforms. If it's unavailable at runtime, this one method fails per run while the rest complete normally, and the failure is surfaced in the UI (`failed_methods` on run status).
 - **In-memory run context**: the live model/dataset context used between `/configure`, `/evaluate`, and `/execute` is held in server memory, not persisted — a backend restart mid-run requires re-uploading.
 - **SQLite** is used for simplicity; concurrent write load at scale is not a design target of the current implementation.
 - **No authentication** — the API and UI assume a single trusted user/environment.
 - The `mitigation_confidence` field on fairness findings (`standard` vs `experimental`) reflects how directly the underlying research supports a given driving-factor → method pairing; it is not a claim that the "experimental" pairing is invalid, only that it's a reasonable inference rather than a directly validated one.
+- **LLM narration is best-effort**: it requires an `ANTHROPIC_API_KEY` and outbound network access; without either, or on any API failure, the platform silently uses the deterministic fallback template instead — the fairness verdict itself is never affected either way.
 
 ---
 
